@@ -261,11 +261,12 @@ MIT License - Free to use and modify
 
 ---
 
-## 👨‍💻 Author
+## 👥 Authors
 
-**Nishant**
+**Nishant** & **Ishwari Bhoyar**
 
 [![GitHub](https://img.shields.io/badge/GitHub-Nishant--aiml-181717?logo=github)](https://github.com/Nishant-aiml)
+[![GitHub](https://img.shields.io/badge/GitHub-ishwaribhoyar-181717?logo=github)](https://github.com/ishwaribhoyar)
 
 ---
 
