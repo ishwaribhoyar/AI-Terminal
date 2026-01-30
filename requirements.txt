@@ -1,0 +1,31 @@
+# IVERI AI Assistant - Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# Core
+python-dotenv>=1.0.0
+openai>=1.0.0
+requests>=2.28.0
+
+# Speech Recognition
+SpeechRecognition>=3.10.0
+PyAudio>=0.2.13
+
+# Text-to-Speech
+pyttsx3>=2.90
+
+# Wake Word Detection
+pvporcupine>=3.0.0
+pvrecorder>=1.2.0
+
+# Audio
+pygame>=2.5.0
+
+# Screenshot & Automation
+pyautogui>=0.9.54
+Pillow>=10.0.0
+
+# System Info
+psutil>=5.9.0
+
+# Raspberry Pi GPIO (only works on Pi)
+# RPi.GPIO>=0.7.1  # Uncomment on Raspberry Pi

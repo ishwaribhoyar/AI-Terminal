@@ -1,0 +1,35 @@
+[Unit]
+Description=IVERI AI Assistant
+After=network.target sound.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/iveri
+EnvironmentFile=/home/pi/iveri/.env
+Environment="DISPLAY=:0"
+ExecStart=/home/pi/iveri/venv/bin/python /home/pi/iveri/main.py
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+
+# Installation Instructions:
+# 1. Copy this file to systemd:
+#    sudo cp iveri.service /etc/systemd/system/
+#
+# 2. Reload systemd:
+#    sudo systemctl daemon-reload
+#
+# 3. Enable auto-start:
+#    sudo systemctl enable iveri.service
+#
+# 4. Start the service:
+#    sudo systemctl start iveri.service
+#
+# 5. Check status:
+#    sudo systemctl status iveri.service
+#
+# 6. View logs:
+#    journalctl -u iveri.service -f

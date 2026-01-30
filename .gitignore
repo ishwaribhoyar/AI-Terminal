@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Environment variables - NEVER commit!
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project data
+data/*.json
+
+# Audio files
+*.wav
+*.mp3
+output.mp3
+
+# Wake word models (except example)
+models/*.ppn
+
+# Logs
+*.log
