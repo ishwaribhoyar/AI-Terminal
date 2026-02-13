@@ -113,32 +113,36 @@ def handle_command(user_input):
     
     # === APPLICATION COMMANDS ===
     
-    if 'open calculator' in text:
+    if 'open calculator' in text or 'calculator' in text:
+        print(f"[DEBUG] Calculator command detected in: '{text}'")
         if IS_WINDOWS:
-            subprocess.Popen(['calc.exe'])
+            os.system('calc.exe')
         else:
-            subprocess.Popen(['gnome-calculator'])
+            os.system('gnome-calculator &')
         return True, "Opening calculator."
     
-    if 'open notepad' in text or 'open text editor' in text:
+    if 'open notepad' in text or 'open text editor' in text or 'notepad' in text:
+        print(f"[DEBUG] Notepad command detected in: '{text}'")
         if IS_WINDOWS:
-            subprocess.Popen(['notepad.exe'])
+            os.system('notepad.exe')
         else:
-            subprocess.Popen(['gedit'])
+            os.system('gedit &')
         return True, "Opening text editor."
     
-    if 'open terminal' in text or 'open command prompt' in text:
+    if 'open terminal' in text or 'open command prompt' in text or 'terminal' in text:
+        print(f"[DEBUG] Terminal command detected in: '{text}'")
         if IS_WINDOWS:
-            subprocess.Popen(['cmd.exe'])
+            os.system('start cmd.exe')
         else:
-            subprocess.Popen(['lxterminal'])
+            os.system('lxterminal &')
         return True, "Opening terminal."
     
-    if 'open file manager' in text or 'open files' in text or 'open explorer' in text:
+    if 'open file manager' in text or 'open files' in text or 'open explorer' in text or 'file manager' in text:
+        print(f"[DEBUG] File manager command detected in: '{text}'")
         if IS_WINDOWS:
-            subprocess.Popen(['explorer.exe'])
+            os.system('explorer.exe')
         else:
-            subprocess.Popen(['pcmanfm'])
+            os.system('pcmanfm &')
         return True, "Opening file manager."
     
     if 'open settings' in text:
