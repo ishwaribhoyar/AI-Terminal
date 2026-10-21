@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: iveri-ai-terminal
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: ELEVENLABS_MODEL_ID
+        value: eleven_flash_v2_5
+      - key: ELEVENLABS_VOICE_ID
+        value: 21m00Tcm4TlvDq8ikWAM

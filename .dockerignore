@@ -1,0 +1,12 @@
+.env
+.env.*
+cache/
+data/memory.json
+data/notes.json
+__pycache__/
+*.py[cod]
+.git
+.github
+venv/
+env/
+*.log

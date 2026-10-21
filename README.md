@@ -307,6 +307,14 @@ PICOVOICE_ACCESS_KEY=your-picovoice-key
 
 ### 3. Run the Assistant
 
+#### 🌐 Web UI & REST API Mode (Browser Experience)
+```bash
+# Launch FastAPI web server & interactive cyber-terminal interface
+python server.py
+# Then open http://localhost:8000 in your browser
+```
+
+#### 💻 CLI & Voice Terminal Mode
 ```bash
 # Full voice & terminal interactive mode
 python main.py
@@ -320,6 +328,35 @@ python main.py --wake
 # Run without audio output (silent mode)
 python main.py --no-tts
 ```
+
+---
+
+## ☁️ Free Cloud Deployment Guide
+
+You can deploy the complete IVERI AI Terminal web application with 24/7 uptime on free cloud tiers:
+
+### 🚀 Option 1: Render.com (Recommended Free Web Service)
+1. Fork or push this repository to your GitHub account: `https://github.com/ishwaribhoyar/AI-Terminal`.
+2. Sign up / Log in to [Render.com](https://render.com).
+3. Click **New +** ➔ **Web Service** ➔ Select your repository.
+4. Render automatically detects the included `render.yaml` or you can configure:
+   - **Runtime**: `Python`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `uvicorn server:app --host 0.0.0.0 --port $PORT`
+5. Under **Environment Variables**, add:
+   - `GEMINI_API_KEY`: *(Your Google AI Studio key)*
+   - `ELEVENLABS_API_KEY`: *(Your ElevenLabs key - optional)*
+6. Click **Deploy Web Service** — in 2 minutes, your live AI terminal URL will be active!
+
+### 🐳 Option 2: Hugging Face Spaces (Free Docker Hosting - 16GB RAM)
+1. Go to [Hugging Face Spaces](https://huggingface.co/spaces) and click **Create new Space**.
+2. Space SDK: Select **Docker** (Blank template).
+3. Connect your GitHub repository or push this codebase to the Space.
+4. In Space **Settings** ➔ **Variables and secrets**, add `GEMINI_API_KEY` and `ELEVENLABS_API_KEY`.
+5. Hugging Face builds the included `Dockerfile` and gives you a free, public `https://huggingface.co/spaces/...` URL!
+
+### 🚂 Option 3: Railway / Koyeb / Fly.io
+The included `Dockerfile` and `Procfile` are auto-detected by **Railway**, **Koyeb**, and **Fly.io** for zero-config one-click deployments.
 
 ---
 
