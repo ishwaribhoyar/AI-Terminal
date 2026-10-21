@@ -86,61 +86,62 @@ The following diagram illustrates the complete end-to-end dataflow across all 5 
 
 ```mermaid
 flowchart TD
-    subgraph SENSORY["1. Hardware & Sensory Layer"]
+    subgraph Sensory["1. Hardware and Sensory Layer"]
         MIC["Microphone Array (PortAudio / PyAudio)"]
         KEY["Terminal Keyboard (Push-to-Talk)"]
-        GPIO_IN["Hardware Pins / Sensors (RPi.GPIO)"]
+        GPIO_IN["Hardware Pins and Sensors (RPi.GPIO)"]
     end
 
-    subgraph EDGE_DISPATCH["2. Edge Dispatcher & Heuristic Filter (<150MB RAM)"]
-        WAKE["Wake Word Engine (Porcupine 'Jarvis')"]
-        STT["Speech Recognition (Ambient Calibrated)"]
-        ROUTER{"Intent Classifier & Pattern Matcher"}
-        LOCAL_CMD["Deterministic Command Engine (commands.py)"]
-        MEM_STORE[("Persistent JSON Memory (memory.json)")]
+    subgraph Edge["2. Edge Dispatcher (Under 150MB RAM)"]
+        WAKE["Wake Word Engine (Porcupine)"]
+        STT["Speech Recognition Engine"]
+        ROUTER{"Intent Classifier Router"}
+        LOCAL_CMD["Deterministic Command Engine"]
+        MEM_STORE[("Persistent JSON Memory")]
     end
 
-    subgraph RAG_CORE["3. Live Online RAG Pipeline (online_rag.py)"]
+    subgraph RAG["3. Live Online RAG Pipeline"]
         RAG_DECIDE{"Temporal / Web Query?"}
-        NEWS_INGEST["Google News RSS Parser (XML Stream)"]
+        NEWS_INGEST["Google News RSS Parser"]
         WIKI_INGEST["Wikipedia REST API Client"]
-        PROMPT_BUILDER["Context Injection & Grounding Engine"]
+        PROMPT_BUILDER["Context Injection Engine"]
     end
 
-    subgraph CLOUD_AI["4. Cloud Intelligence Tier"]
-        GEMINI["Google Gemini Flash (Model Fallback Chain)"]
-        ELEVEN["ElevenLabs Flash v2.5 Neural Speech (~75ms)"]
+    subgraph Cloud["4. Cloud Intelligence Tier"]
+        GEMINI["Google Gemini Flash API"]
+        ELEVEN["ElevenLabs Flash v2.5 Neural TTS"]
     end
 
-    subgraph OUTPUT_STREAM["5. Dual-Tier Output & Actuation Layer"]
-        CACHE[("MD5 Audio Disk Cache (cache/audio/)")]
-        PLAYER["Pygame Mixer (MP3 Audio Streamer)"]
-        FALLBACK_TTS["Offline Voice Fallback (pyttsx3 / SAPI5)"]
-        ACTUATORS["Physical Actuators / Screen / OS APIs"]
+    subgraph Output["5. Dual-Tier Output Layer"]
+        CACHE[("MD5 Audio Disk Cache")]
+        PLAYER["Pygame Mixer (MP3 Audio)"]
+        FALLBACK_TTS["Offline Voice Fallback (pyttsx3)"]
+        ACTUATORS["Physical Actuators and Screen OS"]
     end
 
-    %% Flow connections
     MIC --> WAKE
     KEY --> ROUTER
     WAKE --> STT
     STT --> ROUTER
     GPIO_IN --> ROUTER
 
-    ROUTER -- "Local intent (Math, Volume, App, GPIO, Memory)" --> LOCAL_CMD
+    ROUTER -->|Local Intent: Math, Volume, Apps| LOCAL_CMD
     LOCAL_CMD --> ACTUATORS
     LOCAL_CMD <--> MEM_STORE
 
-    ROUTER -- "Conversational / Complex Query" --> RAG_DECIDE
-    RAG_DECIDE -- "Requires Real-Time Data" --> NEWS_INGEST & WIKI_INGEST
-    NEWS_INGEST & WIKI_INGEST --> PROMPT_BUILDER
-    RAG_DECIDE -- "General Reasoning" --> PROMPT_BUILDER
+    ROUTER -->|General Query| RAG_DECIDE
+    RAG_DECIDE -->|Requires Live Data| NEWS_INGEST
+    RAG_DECIDE -->|Requires Live Data| WIKI_INGEST
+    NEWS_INGEST --> PROMPT_BUILDER
+    WIKI_INGEST --> PROMPT_BUILDER
+    RAG_DECIDE -->|General Knowledge| PROMPT_BUILDER
 
     PROMPT_BUILDER --> GEMINI
     GEMINI --> ELEVEN
     
-    ELEVEN -- "Audio Stream" --> CACHE
+    ELEVEN -->|Audio Stream| CACHE
     CACHE --> PLAYER
-    ELEVEN -. "Permission / Network Fail" .-> FALLBACK_TTS
+    ELEVEN -.->|Offline Fallback| FALLBACK_TTS
     
     PLAYER --> ACTUATORS
     FALLBACK_TTS --> ACTUATORS
@@ -154,25 +155,25 @@ flowchart TD
 sequenceDiagram
     autonumber
     actor User
-    participant Edge as Edge Core (main.py / commands.py)
-    participant RAG as Online RAG (online_rag.py)
-    participant Gemini as Gemini Flash (gpt.py)
-    participant Audio as Voice Engine (tts.py)
+    participant Edge as Edge Core
+    participant RAG as Online RAG
+    participant Gemini as Gemini Flash
+    participant Audio as Voice Engine
 
-    User->>Edge: "Jarvis, what's the latest news on SpaceX?"
-    Note over Edge: Wake word triggered; audio captured & converted to text
-    Edge->>Edge: Heuristic intent check (Not a local command)
-    Edge->>RAG: Detect temporal keywords ("latest news")
-    RAG->>RAG: Ingest Google News RSS & Wikipedia live endpoints
+    User->>Edge: "Jarvis, what is the latest news on SpaceX?"
+    Note over Edge: Wake word triggered and audio transcribed to text
+    Edge->>Edge: Evaluate intent check (Not a local command)
+    Edge->>RAG: Detect temporal keywords (latest news)
+    RAG->>RAG: Ingest Google News RSS and Wikipedia live feeds
     RAG-->>Edge: Formatted Grounding Context
-    Edge->>Gemini: Stream prompt + Grounded Context (thinkingBudget=0)
+    Edge->>Gemini: Stream prompt with Grounded Context
     Gemini-->>Edge: Synthesized concise response (1.4s)
     Edge->>Audio: Request synthesis via Eleven Flash v2.5
-    alt Cache Hit (MD5 found on disk)
+    alt Cache Hit (MD5 audio file exists on disk)
         Audio->>User: Play cached MP3 via Pygame (0ms latency)
-    else Cache Miss / API Active
-        Audio->>User: Stream ElevenLabs Flash audio (~75ms latency)
-    else API Quota / Offline
+    else Cache Miss (Online Generation)
+        Audio->>User: Stream ElevenLabs Flash audio (75ms latency)
+    else Network Offline / Quota Exceeded
         Audio->>User: Speak via offline pyttsx3 engine
     end
 ```
