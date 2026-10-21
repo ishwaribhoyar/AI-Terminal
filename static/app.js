@@ -143,16 +143,22 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Robust Web Speech API (Browser STT) with auto-reconnect & silence debouncing
+    // Dual-Engine Speech-to-Text: Browser SpeechRecognition + Direct WebAudio Fallback
     let silenceTimer = null;
     let currentSpeechText = "";
+    let isDirectRecording = false;
+    let directMediaStream = null;
+    let directAudioContext = null;
+    let directAudioProcessor = null;
+    let directPcmBuffers = [];
+    let webSpeechNetworkBlocked = false;
 
     function createRecognizer() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) return null;
 
         const rec = new SpeechRecognition();
-        rec.continuous = true;
+        rec.continuous = false; // Set false to prevent extension loop on network error
         rec.interimResults = true;
         rec.lang = "en-US";
         rec.maxAlternatives = 1;
@@ -169,22 +175,15 @@ document.addEventListener("DOMContentLoaded", () => {
         rec.onresult = (event) => {
             let interim = "";
             let final = "";
-
             for (let i = event.resultIndex; i < event.results.length; i++) {
                 const text = event.results[i][0].transcript;
-                if (event.results[i].isFinal) {
-                    final += text;
-                } else {
-                    interim += text;
-                }
+                if (event.results[i].isFinal) final += text;
+                else interim += text;
             }
-
             const spoken = (final || interim).trim();
             if (spoken) {
                 cliInput.value = spoken;
                 currentSpeechText = spoken;
-
-                // Debounce silence timer: auto-submit 1.8s after user stops talking
                 clearTimeout(silenceTimer);
                 silenceTimer = setTimeout(() => {
                     if (isListening && currentSpeechText) {
@@ -198,10 +197,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
         rec.onerror = (event) => {
             console.warn("Speech recognition notice:", event.error);
-            // CRITICAL: Ignore 'no-speech' error so it does NOT quickly turn off
-            if (event.error === "no-speech") {
+            if (event.error === "no-speech") return;
+            
+            // If browser extension / adblocker blocks Google speech API, switch immediately to Direct Mic
+            if (event.error === "network") {
+                webSpeechNetworkBlocked = true;
+                stopListening();
+                console.log("Switching to Direct Local Audio Recording...");
+                startDirectAudioRecording();
                 return;
             }
+
             if (event.error === "not-allowed" || event.error === "service-not-allowed") {
                 stopListening();
                 alert("Microphone permission was denied. Please allow microphone access in your browser address bar.");
@@ -209,12 +215,10 @@ document.addEventListener("DOMContentLoaded", () => {
         };
 
         rec.onend = () => {
-            // Keep listening if user didn't manually stop
-            if (isListening) {
-                try {
-                    rec.start();
-                } catch (e) {
-                    stopListening();
+            if (isListening && !webSpeechNetworkBlocked) {
+                stopListening();
+                if (currentSpeechText) {
+                    handleSubmit(currentSpeechText);
                 }
             }
         };
@@ -222,11 +226,143 @@ document.addEventListener("DOMContentLoaded", () => {
         return rec;
     }
 
-    recognition = createRecognizer();
-    if (!recognition) {
-        btnMic.title = "Voice recognition not supported in this browser";
-        btnMic.style.opacity = "0.5";
+    // Direct Audio Recording via Web Audio API (Bypasses Google Speech Servers completely)
+    async function startDirectAudioRecording() {
+        try {
+            isDirectRecording = true;
+            isListening = true;
+            directPcmBuffers = [];
+
+            directMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            directAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = directAudioContext.createMediaStreamSource(directMediaStream);
+            
+            directAudioProcessor = directAudioContext.createScriptProcessor(4096, 1, 1);
+            source.connect(directAudioProcessor);
+            directAudioProcessor.connect(directAudioContext.destination);
+
+            directAudioProcessor.onaudioprocess = (e) => {
+                if (!isDirectRecording) return;
+                const input = e.inputBuffer.getChannelData(0);
+                directPcmBuffers.push(new Float32Array(input));
+            };
+
+            btnMic.classList.add("listening");
+            audioStateTag.textContent = "Listening (Direct Mic)... Tap to send";
+            cliInput.placeholder = "Listening directly via microphone... Tap mic when done";
+            cancelAnimationFrame(visualizerAnimationId);
+            drawActiveVisualizer();
+        } catch (err) {
+            console.error("Direct audio recording failed:", err);
+            stopDirectAudioRecording();
+            alert("Microphone access error: " + err.message);
+        }
     }
+
+    async function stopDirectAudioRecording() {
+        isDirectRecording = false;
+        isListening = false;
+        btnMic.classList.remove("listening");
+        audioStateTag.textContent = "Processing speech...";
+        cliInput.placeholder = "Transcribing audio...";
+
+        if (directAudioProcessor) {
+            try { directAudioProcessor.disconnect(); } catch (e) {}
+        }
+        if (directAudioContext) {
+            try { directAudioContext.close(); } catch (e) {}
+        }
+        if (directMediaStream) {
+            try { directMediaStream.getTracks().forEach(t => t.stop()); } catch (e) {}
+        }
+
+        cancelAnimationFrame(visualizerAnimationId);
+        drawIdleVisualizer();
+
+        if (directPcmBuffers.length === 0) {
+            audioStateTag.textContent = "Ready";
+            cliInput.placeholder = "Ask a question, enter math, or run a command... (Enter)";
+            return;
+        }
+
+        // Resample/encode to 16kHz mono WAV
+        const sampleRate = directAudioContext ? directAudioContext.sampleRate : 44100;
+        let totalLen = directPcmBuffers.reduce((a, b) => a + b.length, 0);
+        let merged = new Float32Array(totalLen);
+        let off = 0;
+        for (let b of directPcmBuffers) {
+            merged.set(b, off);
+            off += b.length;
+        }
+        directPcmBuffers = [];
+
+        // Downsample to 16kHz if needed
+        const downsampled = downsampleBuffer(merged, sampleRate, 16000);
+        const wavBlob = encodeWAVBlob(downsampled, 16000);
+
+        try {
+            const resp = await fetch("/api/transcribe", {
+                method: "POST",
+                headers: { "Content-Type": "audio/wav" },
+                body: wavBlob
+            });
+            const resData = await resp.json();
+            const text = (resData.transcript || "").trim();
+            audioStateTag.textContent = "Ready";
+            cliInput.placeholder = "Ask a question, enter math, or run a command... (Enter)";
+            if (text) {
+                cliInput.value = text;
+                handleSubmit(text);
+            }
+        } catch (e) {
+            console.warn("Direct transcription network error:", e);
+            audioStateTag.textContent = "Ready";
+            cliInput.placeholder = "Ask a question, enter math, or run a command... (Enter)";
+        }
+    }
+
+    function downsampleBuffer(buffer, inputSampleRate, outputSampleRate) {
+        if (inputSampleRate === outputSampleRate) return buffer;
+        const ratio = inputSampleRate / outputSampleRate;
+        const newLen = Math.round(buffer.length / ratio);
+        const result = new Float32Array(newLen);
+        for (let i = 0; i < newLen; i++) {
+            result[i] = buffer[Math.floor(i * ratio)];
+        }
+        return result;
+    }
+
+    function encodeWAVBlob(samples, sampleRate) {
+        const buffer = new ArrayBuffer(44 + samples.length * 2);
+        const view = new DataView(buffer);
+        const writeString = (v, offset, s) => {
+            for (let i = 0; i < s.length; i++) v.setUint8(offset + i, s.charCodeAt(i));
+        };
+
+        writeString(view, 0, 'RIFF');
+        view.setUint32(4, 36 + samples.length * 2, true);
+        writeString(view, 8, 'WAVE');
+        writeString(view, 12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true); // PCM
+        view.setUint16(22, 1, true); // Mono
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * 2, true);
+        view.setUint16(32, 2, true);
+        view.setUint16(34, 16, true);
+        writeString(view, 36, 'data');
+        view.setUint32(40, samples.length * 2, true);
+
+        let idx = 44;
+        for (let i = 0; i < samples.length; i++) {
+            let s = Math.max(-1, Math.min(1, samples[i]));
+            view.setInt16(idx, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+            idx += 2;
+        }
+        return new Blob([view], { type: 'audio/wav' });
+    }
+
+    recognition = createRecognizer();
 
     function stopListening() {
         isListening = false;
@@ -235,17 +371,19 @@ document.addEventListener("DOMContentLoaded", () => {
         audioStateTag.textContent = "Ready";
         cliInput.placeholder = "Ask a question, enter math, or run a command... (Enter)";
         if (recognition) {
-            try {
-                recognition.stop();
-            } catch (e) {}
+            try { recognition.stop(); } catch (e) {}
         }
         cancelAnimationFrame(visualizerAnimationId);
         drawIdleVisualizer();
     }
 
     btnMic.addEventListener("click", async () => {
+        if (isDirectRecording) {
+            stopDirectAudioRecording();
+            return;
+        }
+
         if (isListening) {
-            // User tapped mic button to stop and submit
             clearTimeout(silenceTimer);
             const textToSubmit = currentSpeechText || cliInput.value.trim();
             stopListening();
@@ -255,15 +393,19 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // Request browser microphone permission to wake up hardware
+        // If Web Speech API was blocked by an extension, use Direct Mic immediately
+        if (webSpeechNetworkBlocked) {
+            startDirectAudioRecording();
+            return;
+        }
+
+        // Request browser microphone permission
         try {
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 stream.getTracks().forEach(track => track.stop());
             }
-        } catch (e) {
-            console.warn("Microphone access prompt:", e);
-        }
+        } catch (e) {}
 
         currentSpeechText = "";
         cliInput.value = "";
@@ -277,16 +419,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 isListening = true;
                 recognition.start();
             } catch (e) {
-                console.warn("Speech start note, restarting:", e);
-                try {
-                    recognition.stop();
-                    setTimeout(() => {
-                        if (isListening) recognition.start();
-                    }, 200);
-                } catch (err) {}
+                console.warn("Speech start fallback:", e);
+                startDirectAudioRecording();
             }
         } else {
-            alert("Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.");
+            startDirectAudioRecording();
         }
     });
 
@@ -345,6 +482,16 @@ document.addEventListener("DOMContentLoaded", () => {
             const source = data.source || "ai";
 
             appendAssistantMessage(reply, source);
+
+            // AUTO-OPEN WEBSITE / SEARCH IN BROWSER
+            if (data.open_url) {
+                console.log("Opening URL in browser:", data.open_url);
+                try {
+                    window.open(data.open_url, "_blank");
+                } catch (e) {
+                    console.warn("Popup blocked:", e);
+                }
+            }
 
             if (isVoiceEnabled) {
                 playAudioResponse(reply, data.audio_url);

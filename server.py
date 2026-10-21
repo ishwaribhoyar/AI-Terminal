@@ -100,8 +100,11 @@ def handle_chat(req: ChatRequest):
     if not user_msg:
         raise HTTPException(status_code=400, detail="Empty message received")
 
-    # Step 1: Check for local/system command
+    # Step 1: Check for local/system command & extract any navigation URL
     is_cmd, cmd_resp = commands.handle_command(user_msg, execute=True)
+    open_url = None
+    if hasattr(commands, 'get_target_url'):
+        open_url = commands.get_target_url(user_msg)
     if is_cmd and cmd_resp:
         response_text = cmd_resp
         source = "command"
@@ -145,7 +148,8 @@ def handle_chat(req: ChatRequest):
         "response": response_text,
         "source": source,
         "voice_engine": voice_engine,
-        "audio_url": audio_url
+        "audio_url": audio_url,
+        "open_url": open_url
     }
 
 

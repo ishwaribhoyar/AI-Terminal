@@ -163,7 +163,10 @@ def handle_command(user_input, execute=True):
     if 'open calculator' in text or text == 'calculator':
         if execute:
             if IS_WINDOWS:
-                subprocess.Popen(['calc.exe'], shell=True)
+                try:
+                    subprocess.Popen('start calc:', shell=True)
+                except Exception:
+                    subprocess.Popen(['calc.exe'], shell=True)
             elif IS_MAC:
                 subprocess.Popen(['open', '-a', 'Calculator'])
             else:
@@ -173,7 +176,10 @@ def handle_command(user_input, execute=True):
     if 'open notepad' in text or 'open text editor' in text or text == 'notepad':
         if execute:
             if IS_WINDOWS:
-                subprocess.Popen(['notepad.exe'])
+                try:
+                    subprocess.Popen('start notepad:', shell=True)
+                except Exception:
+                    subprocess.Popen(['notepad.exe'])
             elif IS_MAC:
                 subprocess.Popen(['open', '-a', 'TextEdit'])
             else:
@@ -458,3 +464,53 @@ LED (Pi only): Turn LED on/off | Blink LED | LED status
 CHAT: Clear history | Help | Goodbye
 
 Or ask any general question for AI answers!"""
+
+
+def get_target_url(user_input):
+    """Extract destination URL if the command is a website or web search command"""
+    if not user_input:
+        return None
+    text = user_input.lower().strip().rstrip('.!?').strip()
+    websites = [
+        ('youtube', 'https://www.youtube.com'),
+        ('google', 'https://www.google.com'),
+        ('facebook', 'https://www.facebook.com'),
+        ('twitter', 'https://www.twitter.com'),
+        ('x.com', 'https://www.twitter.com'),
+        ('open x', 'https://www.twitter.com'),
+        ('github', 'https://www.github.com'),
+        ('instagram', 'https://www.instagram.com'),
+        ('linkedin', 'https://www.linkedin.com'),
+        ('reddit', 'https://www.reddit.com'),
+        ('whatsapp', 'https://web.whatsapp.com'),
+        ('gmail', 'https://mail.google.com'),
+        ('spotify', 'https://open.spotify.com'),
+        ('netflix', 'https://www.netflix.com'),
+    ]
+    for site_key, url in websites:
+        if f'open {site_key}' in text or text == site_key or (site_key == 'twitter' and 'open x' in text):
+            return url
+
+    if 'youtube' in text and any(w in text for w in ['search', 'play', 'find']):
+        q = text
+        for word in ['search', 'youtube', 'for', 'on', 'play', 'find', 'video', 'videos']:
+            q = q.replace(word, '')
+        q = q.strip()
+        if q:
+            return f'https://www.youtube.com/results?search_query={urllib.parse.quote(q)}'
+
+    if text.startswith('search for ') or text.startswith('google ') or text.startswith('search '):
+        q = text
+        for word in ['search for', 'search', 'google', 'for']:
+            if q.startswith(word):
+                q = q[len(word):].strip()
+                break
+        if q and 'youtube' not in q:
+            return f'https://www.google.com/search?q={urllib.parse.quote(q)}'
+
+    if 'wikipedia' in text:
+        q = text.replace('wikipedia', '').replace('search', '').replace('look up', '').replace('for', '').strip()
+        if q:
+            return f'https://en.wikipedia.org/wiki/{urllib.parse.quote(q.replace(" ", "_"))}'
+
+    return None
