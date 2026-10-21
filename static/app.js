@@ -1,4 +1,4 @@
-// app.js - Frontend Client Logic for IVERI AI Terminal
+// app.js - Frontend Client Logic for IVERI Terminal
 document.addEventListener("DOMContentLoaded", () => {
     // DOM Elements
     const terminalViewport = document.getElementById("terminalViewport");
@@ -10,35 +10,63 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnSend = document.getElementById("btnSend");
     const btnMic = document.getElementById("btnMic");
     const btnToggleView = document.getElementById("btnToggleView");
+    const viewText = document.getElementById("viewText");
     const btnToggleVoice = document.getElementById("btnToggleVoice");
     const voiceIcon = document.getElementById("voiceIcon");
     const voiceText = document.getElementById("voiceText");
+    const btnThemeToggle = document.getElementById("btnThemeToggle");
+    const themeIcon = document.getElementById("themeIcon");
+    const themeText = document.getElementById("themeText");
     const ttsAudio = document.getElementById("ttsAudio");
     const audioStateTag = document.getElementById("audioStateTag");
     const audioCanvas = document.getElementById("audioVisualizer");
-    const quickChips = document.querySelectorAll(".chip");
+    const promptChips = document.querySelectorAll(".prompt-chip");
 
     // Application State
-    let currentView = "terminal"; // 'terminal' | 'chat'
+    let currentView = "terminal";
     let isVoiceEnabled = true;
     let isListening = false;
     let isProcessing = false;
     let recognition = null;
-    let audioContext = null;
-    let analyser = null;
     let visualizerAnimationId = null;
 
-    // Initialize Web Audio Visualizer
+    // THEME MANAGEMENT (Light / Dark)
+    const savedTheme = localStorage.getItem("iveri_theme") || "dark";
+    setTheme(savedTheme);
+
+    function setTheme(theme) {
+        document.documentElement.setAttribute("data-theme", theme);
+        localStorage.setItem("iveri_theme", theme);
+        if (theme === "dark") {
+            themeIcon.textContent = "☀️";
+            themeText.textContent = "Light";
+        } else {
+            themeIcon.textContent = "🌙";
+            themeText.textContent = "Dark";
+        }
+    }
+
+    btnThemeToggle.addEventListener("click", () => {
+        const currentTheme = document.documentElement.getAttribute("data-theme") || "dark";
+        const newTheme = currentTheme === "dark" ? "light" : "dark";
+        setTheme(newTheme);
+    });
+
+    // AUDIO VISUALIZER
     const canvasCtx = audioCanvas.getContext("2d");
+    function isDark() {
+        return document.documentElement.getAttribute("data-theme") === "dark";
+    }
+
     function drawIdleVisualizer() {
         canvasCtx.clearRect(0, 0, audioCanvas.width, audioCanvas.height);
-        canvasCtx.fillStyle = "rgba(0, 240, 255, 0.2)";
+        canvasCtx.fillStyle = isDark() ? "rgba(148, 163, 184, 0.25)" : "rgba(100, 116, 139, 0.25)";
         const barWidth = 3;
         const gap = 3;
         const totalBars = Math.floor(audioCanvas.width / (barWidth + gap));
         
         for (let i = 0; i < totalBars; i++) {
-            const height = 2 + Math.sin(Date.now() / 300 + i * 0.2) * 1.5;
+            const height = 2 + Math.sin(Date.now() / 400 + i * 0.2) * 1.5;
             canvasCtx.fillRect(i * (barWidth + gap), (audioCanvas.height - height) / 2, barWidth, height);
         }
         visualizerAnimationId = requestAnimationFrame(drawIdleVisualizer);
@@ -51,42 +79,40 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         canvasCtx.clearRect(0, 0, audioCanvas.width, audioCanvas.height);
-        const barWidth = 4;
-        const gap = 2;
+        const barWidth = 3;
+        const gap = 3;
         const totalBars = Math.floor(audioCanvas.width / (barWidth + gap));
 
         for (let i = 0; i < totalBars; i++) {
-            let height = 4;
+            let height = 3;
             if (isListening) {
-                height = 6 + Math.random() * 16;
-                canvasCtx.fillStyle = "#ff3366";
+                height = 4 + Math.random() * 16;
+                canvasCtx.fillStyle = "#e11d48"; // Rose
             } else if (isProcessing) {
-                height = 4 + Math.sin(Date.now() / 150 + i * 0.4) * 8;
-                canvasCtx.fillStyle = "#ff9900";
+                height = 3 + Math.sin(Date.now() / 150 + i * 0.4) * 8;
+                canvasCtx.fillStyle = "#d97706"; // Amber
             } else if (!ttsAudio.paused) {
-                height = 6 + Math.random() * 22;
-                canvasCtx.fillStyle = "#00ff9d";
+                height = 4 + Math.random() * 18;
+                canvasCtx.fillStyle = "#059669"; // Emerald
             }
             canvasCtx.fillRect(i * (barWidth + gap), (audioCanvas.height - height) / 2, barWidth, height);
         }
         visualizerAnimationId = requestAnimationFrame(drawActiveVisualizer);
     }
 
-    // Toggle View (Terminal Shell vs Neural Chat)
+    // Toggle View (Terminal vs Chat)
     btnToggleView.addEventListener("click", () => {
         if (currentView === "terminal") {
             currentView = "chat";
             terminalViewport.classList.remove("active");
             chatViewport.classList.add("active");
-            btnToggleView.querySelector(".icon").textContent = "💬";
-            btnToggleView.querySelector(".btn-text").textContent = "CHAT VIEW";
+            viewText.textContent = "Chat View";
             chatViewport.scrollTop = chatViewport.scrollHeight;
         } else {
             currentView = "terminal";
             chatViewport.classList.remove("active");
             terminalViewport.classList.add("active");
-            btnToggleView.querySelector(".icon").textContent = "💻";
-            btnToggleView.querySelector(".btn-text").textContent = "TERMINAL";
+            viewText.textContent = "Terminal";
             terminalViewport.scrollTop = terminalViewport.scrollHeight;
         }
     });
@@ -97,21 +123,17 @@ document.addEventListener("DOMContentLoaded", () => {
         if (isVoiceEnabled) {
             btnToggleVoice.classList.add("active");
             voiceIcon.textContent = "🔊";
-            voiceText.textContent = "VOICE ON";
+            voiceText.textContent = "Voice On";
         } else {
             btnToggleVoice.classList.remove("active");
             voiceIcon.textContent = "🔇";
-            voiceText.textContent = "VOICE OFF";
-            if (!ttsAudio.paused) {
-                ttsAudio.pause();
-            }
-            if (window.speechSynthesis) {
-                window.speechSynthesis.cancel();
-            }
+            voiceText.textContent = "Voice Off";
+            if (!ttsAudio.paused) ttsAudio.pause();
+            if (window.speechSynthesis) window.speechSynthesis.cancel();
         }
     });
 
-    // Web Speech API Initialization (Browser-native STT)
+    // Web Speech API (Browser STT)
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
         recognition = new SpeechRecognition();
@@ -122,8 +144,7 @@ document.addEventListener("DOMContentLoaded", () => {
         recognition.onstart = () => {
             isListening = true;
             btnMic.classList.add("listening");
-            audioStateTag.textContent = "LISTENING...";
-            audioStateTag.style.color = "#ff3366";
+            audioStateTag.textContent = "Listening...";
             cancelAnimationFrame(visualizerAnimationId);
             drawActiveVisualizer();
         };
@@ -134,14 +155,8 @@ document.addEventListener("DOMContentLoaded", () => {
             handleSubmit(transcript);
         };
 
-        recognition.onerror = (event) => {
-            console.warn("Speech recognition error:", event.error);
-            stopListening();
-        };
-
-        recognition.onend = () => {
-            stopListening();
-        };
+        recognition.onerror = () => stopListening();
+        recognition.onend = () => stopListening();
     } else {
         btnMic.title = "Voice recognition not supported in this browser";
         btnMic.style.opacity = "0.5";
@@ -150,17 +165,13 @@ document.addEventListener("DOMContentLoaded", () => {
     function stopListening() {
         isListening = false;
         btnMic.classList.remove("listening");
-        audioStateTag.textContent = "IDLE";
-        audioStateTag.style.color = "#00f0ff";
+        audioStateTag.textContent = "Ready";
         cancelAnimationFrame(visualizerAnimationId);
         drawIdleVisualizer();
     }
 
     btnMic.addEventListener("click", () => {
-        if (!recognition) {
-            appendTerminalMessage("System", "Web Speech API is not supported in this browser. Please type.", "info");
-            return;
-        }
+        if (!recognition) return;
         if (isListening) {
             recognition.stop();
         } else {
@@ -172,8 +183,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Quick Action Chips
-    quickChips.forEach(chip => {
+    // Quick Prompt Chips
+    promptChips.forEach(chip => {
         chip.addEventListener("click", () => {
             const query = chip.getAttribute("data-query");
             if (query && !isProcessing) {
@@ -183,7 +194,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // Form Submit Handler
+    // Form Submit
     consoleForm.addEventListener("submit", (e) => {
         e.preventDefault();
         const text = cliInput.value.trim();
@@ -192,19 +203,18 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Core Send & API Request Handler
+    // Core Submit & API Communication
     async function handleSubmit(text) {
         if (!text || isProcessing) return;
         isProcessing = true;
         cliInput.value = "";
         cliInput.disabled = true;
         btnSend.disabled = true;
-        audioStateTag.textContent = "PROCESSING...";
-        audioStateTag.style.color = "#ff9900";
+        audioStateTag.textContent = "Thinking...";
         cancelAnimationFrame(visualizerAnimationId);
         drawActiveVisualizer();
 
-        // Append User Input to Views
+        // Render User Input
         appendUserMessage(text);
 
         try {
@@ -219,17 +229,15 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: Failed to reach IVERI`);
+                throw new Error(`HTTP ${response.status}`);
             }
 
             const data = await response.json();
             const reply = data.response || "No response received.";
             const source = data.source || "ai";
 
-            // Append response to Views
             appendAssistantMessage(reply, source);
 
-            // Handle Audio Playback
             if (isVoiceEnabled) {
                 playAudioResponse(reply, data.audio_url);
             } else {
@@ -237,8 +245,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
         } catch (err) {
-            console.error("Communication error:", err);
-            appendAssistantMessage(`Error connecting to IVERI engine: ${err.message}`, "command");
+            appendAssistantMessage(`Error connecting to assistant: ${err.message}`, "command");
             finishProcessing();
         }
     }
@@ -248,29 +255,22 @@ document.addEventListener("DOMContentLoaded", () => {
         cliInput.disabled = false;
         btnSend.disabled = false;
         cliInput.focus();
-        audioStateTag.textContent = "IDLE";
-        audioStateTag.style.color = "#00f0ff";
+        audioStateTag.textContent = "Ready";
         cancelAnimationFrame(visualizerAnimationId);
         drawIdleVisualizer();
     }
 
-    // Audio Playback: ElevenLabs Stream -> Fallback to Web Speech Synthesis
+    // Audio Playback
     function playAudioResponse(text, audioUrl) {
-        audioStateTag.textContent = "SPEAKING...";
-        audioStateTag.style.color = "#00ff9d";
+        audioStateTag.textContent = "Speaking...";
         cancelAnimationFrame(visualizerAnimationId);
         drawActiveVisualizer();
 
         if (audioUrl) {
             ttsAudio.src = audioUrl;
             ttsAudio.play().then(() => {
-                ttsAudio.onended = () => {
-                    finishProcessing();
-                };
-            }).catch(err => {
-                console.warn("ElevenLabs audio play rejected, using browser voice fallback:", err);
-                fallbackBrowserTTS(text);
-            });
+                ttsAudio.onended = () => finishProcessing();
+            }).catch(() => fallbackBrowserTTS(text));
         } else {
             fallbackBrowserTTS(text);
         }
@@ -281,13 +281,8 @@ document.addEventListener("DOMContentLoaded", () => {
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.rate = 1.05;
-            utterance.pitch = 1.0;
-            utterance.onend = () => {
-                finishProcessing();
-            };
-            utterance.onerror = () => {
-                finishProcessing();
-            };
+            utterance.onend = () => finishProcessing();
+            utterance.onerror = () => finishProcessing();
             window.speechSynthesis.speak(utterance);
         } else {
             finishProcessing();
@@ -300,10 +295,10 @@ document.addEventListener("DOMContentLoaded", () => {
         entry.className = "term-entry";
 
         const tagClass = source === "rag" ? "rag" : (source === "command" ? "command" : "ai");
-        const tagLabel = source === "rag" ? "ONLINE RAG" : (source === "command" ? "LOCAL" : "GEMINI");
+        const tagLabel = source === "rag" ? "Online RAG" : (source === "command" ? "Local" : "Gemini");
 
         entry.innerHTML = `
-            <div class="term-prompt-line">iveri@ai:~$ ${escapeHtml(userText)}</div>
+            <div class="term-prompt-line">iveri&gt; ${escapeHtml(userText)}</div>
             <div class="term-response-line">
                 <span class="term-tag ${tagClass}">[${tagLabel}]</span>${escapeHtml(responseText)}
             </div>
@@ -312,43 +307,29 @@ document.addEventListener("DOMContentLoaded", () => {
         terminalViewport.scrollTop = terminalViewport.scrollHeight;
     }
 
-    function appendTerminalMessage(prefix, msg, level = "info") {
-        const log = document.createElement("div");
-        log.className = `term-log ${level}`;
-        log.innerHTML = `<span class="log-prefix">[${escapeHtml(prefix)}]</span> ${escapeHtml(msg)}`;
-        terminalFeed.appendChild(log);
-        terminalViewport.scrollTop = terminalViewport.scrollHeight;
-    }
-
     // Append to Chat View
     function appendChatBubble(text, sender, source = "default") {
         const bubble = document.createElement("div");
-        bubble.className = `chat-bubble ${sender}`;
+        bubble.className = `chat-message ${sender}`;
 
         const tagClass = source === "rag" ? "rag" : (source === "command" ? "command" : "ai");
-        const tagLabel = source === "rag" ? "ONLINE RAG" : (source === "command" ? "LOCAL" : "GEMINI FLASH");
+        const tagLabel = source === "rag" ? "Online RAG" : (source === "command" ? "Local" : "Gemini Flash");
 
         if (sender === "user") {
-            bubble.innerHTML = `
-                <div class="bubble-header">
-                    <span class="author-badge">OPERATOR</span>
-                </div>
-                <div class="bubble-content">${escapeHtml(text)}</div>
-            `;
+            bubble.innerHTML = `<div class="message-text">${escapeHtml(text)}</div>`;
         } else {
             bubble.innerHTML = `
-                <div class="bubble-header">
-                    <span class="author-badge">IVERI AI</span>
-                    <span class="source-tag ${tagClass}">${tagLabel}</span>
+                <div class="message-meta">
+                    <span class="sender-name">IVERI</span>
+                    <span class="source-pill ${tagClass}">${tagLabel}</span>
                 </div>
-                <div class="bubble-content">${escapeHtml(text)}</div>
+                <div class="message-text">${escapeHtml(text)}</div>
             `;
         }
         chatFeed.appendChild(bubble);
         chatViewport.scrollTop = chatViewport.scrollHeight;
     }
 
-    // Unified Messengers
     let pendingUserText = "";
     function appendUserMessage(text) {
         pendingUserText = text;
@@ -368,12 +349,4 @@ document.addEventListener("DOMContentLoaded", () => {
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
     }
-
-    // Poll System Status
-    fetch("/api/status")
-        .then(r => r.json())
-        .then(data => {
-            console.log("IVERI Status:", data);
-        })
-        .catch(err => console.warn("Status check note:", err));
 });

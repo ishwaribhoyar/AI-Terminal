@@ -1,79 +1,66 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IVERI AI Terminal | Edge-Cloud Intelligent Assistant</title>
+    <title>IVERI Terminal — Intelligent Assistant</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%20%220%22%20%22100%22%20%22100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%20%220%22%20%22100%22%20%22100%22><text y=%22.9em%22 font-size=%2290%22>⌘</text></svg>">
 </head>
-<body class="theme-cyber">
-    <div class="cyber-scanline"></div>
-    <div class="cyber-grid-overlay"></div>
-
-    <div class="app-container">
-        <!-- TOP HUD -->
-        <header class="hud-header">
-            <div class="hud-brand">
-                <span class="hud-symbol">⚡</span>
-                <div class="hud-title-wrap">
-                    <h1 class="hud-title">IVERI<span class="hud-accent">.AI</span></h1>
-                    <span class="hud-tag">AUTONOMOUS TERMINAL & VOICE AGENT</span>
+<body>
+    <div class="app-layout">
+        <!-- TOP NAVIGATION BAR -->
+        <header class="app-header">
+            <div class="header-left">
+                <div class="brand-badge">
+                    <span class="brand-icon">⌘</span>
+                    <span class="brand-name">IVERI</span>
+                    <span class="version-tag">v2.0</span>
+                </div>
+                <div class="status-indicators">
+                    <span class="indicator-badge gemini" title="Google Gemini Flash Engine">
+                        <span class="indicator-dot"></span>
+                        <span class="indicator-text">Gemini Flash</span>
+                    </span>
+                    <span class="indicator-badge rag" title="Real-Time Online RAG">
+                        <span class="indicator-dot"></span>
+                        <span class="indicator-text">Online RAG</span>
+                    </span>
+                    <span class="indicator-badge voice" title="ElevenLabs Flash v2.5 Voice Engine">
+                        <span class="indicator-dot"></span>
+                        <span class="indicator-text">Eleven Flash v2.5</span>
+                    </span>
                 </div>
             </div>
 
-            <div class="hud-status-cluster">
-                <div class="status-pill status-gemini" id="statusGemini" title="Google Gemini Flash Engine">
-                    <span class="pulse-dot"></span>
-                    <span class="pill-label">GEMINI FLASH</span>
-                </div>
-                <div class="status-pill status-rag" id="statusRag" title="Real-Time Online RAG">
-                    <span class="pulse-dot"></span>
-                    <span class="pill-label">ONLINE RAG</span>
-                </div>
-                <div class="status-pill status-tts" id="statusTts" title="ElevenLabs Flash v2.5 / Audio Engine">
-                    <span class="pulse-dot"></span>
-                    <span class="pill-label">ELEVEN FLASH v2.5</span>
-                </div>
-            </div>
-
-            <div class="hud-controls">
-                <button class="hud-toggle-btn active" id="btnToggleView" title="Toggle between Terminal Shell and Neural Chat">
-                    <span class="icon">💻</span>
-                    <span class="btn-text">TERMINAL</span>
+            <div class="header-right">
+                <button class="nav-btn" id="btnThemeToggle" title="Toggle Light / Dark theme">
+                    <span class="theme-icon" id="themeIcon">☀️</span>
+                    <span class="nav-btn-text" id="themeText">Light</span>
                 </button>
-                <button class="hud-toggle-btn active" id="btnToggleVoice" title="Enable/Disable voice audio responses">
-                    <span class="icon" id="voiceIcon">🔊</span>
-                    <span class="btn-text" id="voiceText">VOICE ON</span>
+                <button class="nav-btn" id="btnToggleView" title="Toggle Terminal / Chat view">
+                    <span class="nav-btn-icon">💻</span>
+                    <span class="nav-btn-text" id="viewText">Terminal</span>
+                </button>
+                <button class="nav-btn active" id="btnToggleVoice" title="Toggle Audio Voice Response">
+                    <span class="nav-btn-icon" id="voiceIcon">🔊</span>
+                    <span class="nav-btn-text" id="voiceText">Voice On</span>
                 </button>
             </div>
         </header>
 
-        <!-- MAIN INTERACTIVE DISPLAY -->
-        <main class="hud-display-core">
+        <!-- MAIN CONTENT AREA -->
+        <main class="main-content">
             <!-- TERMINAL SHELL VIEW -->
             <section class="viewport-terminal active" id="terminalViewport">
                 <div class="terminal-feed" id="terminalFeed">
-                    <pre class="ascii-banner">
-  ██╗██╗   ██╗███████╗██████╗ ██╗     █████╗ ██╗
-  ██║██║   ██║██╔════╝██╔══██╗██║    ██╔══██╗██║
-  ██║██║   ██║█████╗  ██████╔╝██║    ███████║██║
-  ██║╚██╗ ██╔╝██╔══╝  ██╔══██╗██║    ██╔══██║██║
-  ██║ ╚████╔╝ ███████╗██║  ██║██║    ██║  ██║██║
-  ╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝╚═╝    ╚═╝  ╚═╝╚═╝
-  [Edge-Cloud Neural Coprocessor • Version 2.0.0]
-                    </pre>
-                    <div class="term-log info">
-                        <span class="log-prefix">[KERNEL]</span> Initializing system nodes... Memory Footprint: &lt;150MB OK.
-                    </div>
-                    <div class="term-log success">
-                        <span class="log-prefix">[READY]</span> Gemini Flash REST Engine + Online RAG stream connected.
-                    </div>
-                    <div class="term-log tip">
-                        <span class="log-prefix">[INPUT]</span> Type a command below, tap the mic icon, or choose a quick prompt.
+                    <div class="session-welcome">
+                        <div class="welcome-title">IVERI Assistant Console</div>
+                        <div class="welcome-meta">Connected to Google Gemini Flash • Live Online RAG Pipeline Active</div>
+                        <div class="welcome-hint">Type any prompt, calculation, or system command below. Tap 🎙️ for voice input.</div>
                     </div>
                 </div>
             </section>
@@ -81,68 +68,65 @@
             <!-- NEURAL CHAT VIEW -->
             <section class="viewport-chat" id="chatViewport">
                 <div class="chat-feed" id="chatFeed">
-                    <div class="chat-bubble assistant">
-                        <div class="bubble-header">
-                            <span class="author-badge">IVERI AI</span>
-                            <span class="source-tag default">SYSTEM</span>
+                    <div class="chat-message assistant">
+                        <div class="message-meta">
+                            <span class="sender-name">IVERI</span>
+                            <span class="source-pill system">System</span>
                         </div>
-                        <div class="bubble-content">
-                            Hello. I am IVERI, powered by Google Gemini Flash with live Online RAG capabilities. How can I assist you today?
+                        <div class="message-text">
+                            Hello. I am IVERI, your assistant powered by Google Gemini Flash with live Online RAG capabilities. How can I help you today?
                         </div>
                     </div>
                 </div>
             </section>
         </main>
 
-        <!-- LIVE AUDIO VISUALIZER HUD -->
-        <div class="visualizer-strip">
-            <canvas id="audioVisualizer" width="800" height="30"></canvas>
-            <div class="audio-state-tag" id="audioStateTag">IDLE</div>
+        <!-- AUDIO ACTIVITY STRIP -->
+        <div class="audio-strip">
+            <canvas id="audioVisualizer" width="700" height="24"></canvas>
+            <span class="audio-status" id="audioStateTag">Ready</span>
         </div>
 
-        <!-- QUICK ACTION CHIPS -->
-        <div class="quick-chips">
-            <button class="chip" data-query="What is the latest world news?">
-                <span class="chip-icon">📰</span> Latest News (RAG)
+        <!-- QUICK PROMPT CHIPS -->
+        <div class="quick-prompts">
+            <button class="prompt-chip" data-query="What is the latest world news?">
+                <span class="chip-label">📰 World News</span>
             </button>
-            <button class="chip" data-query="Tell me the current updated news on SpaceX">
-                <span class="chip-icon">🚀</span> SpaceX News (RAG)
+            <button class="prompt-chip" data-query="Tell me the current updated news on SpaceX">
+                <span class="chip-label">🚀 SpaceX Updates</span>
             </button>
-            <button class="chip" data-query="What is 144 multiplied by 12?">
-                <span class="chip-icon">🧮</span> Local Math
+            <button class="prompt-chip" data-query="What is 144 multiplied by 12?">
+                <span class="chip-label">🧮 144 * 12</span>
             </button>
-            <button class="chip" data-query="cpu temperature and battery status">
-                <span class="chip-icon">⚡</span> System Telemetry
+            <button class="prompt-chip" data-query="cpu temperature and battery status">
+                <span class="chip-label">⚡ System Stats</span>
             </button>
-            <button class="chip" data-query="what is the weather today?">
-                <span class="chip-icon">🌤️</span> Live Weather
+            <button class="prompt-chip" data-query="what is the weather today?">
+                <span class="chip-label">🌤️ Live Weather</span>
             </button>
-            <button class="chip" data-query="remember my project name is IVERI Terminal">
-                <span class="chip-icon">🧠</span> Remember Fact
+            <button class="prompt-chip" data-query="remember my project name is IVERI">
+                <span class="chip-label">🧠 Remember Info</span>
             </button>
         </div>
 
-        <!-- BOTTOM INPUT CONSOLE -->
-        <footer class="hud-console">
-            <form class="console-form" id="consoleForm">
-                <div class="console-prompt-label">iveri@ai:~$</div>
+        <!-- BOTTOM CONSOLE / INPUT BAR -->
+        <footer class="app-footer">
+            <form class="input-form" id="consoleForm">
+                <span class="input-prompt">iveri&gt;</span>
                 <input 
                     type="text" 
                     id="cliInput" 
-                    class="console-input" 
-                    placeholder="Enter command, math, or ask anything... (Press Enter)" 
+                    class="main-input" 
+                    placeholder="Ask a question, enter math, or run a command... (Enter)" 
                     autocomplete="off"
                     autofocus
                 />
-                
-                <button type="button" class="mic-btn" id="btnMic" title="Voice Input (Speech-to-Text)">
-                    <span class="mic-icon">🎙️</span>
-                    <span class="mic-wave"></span>
+                <button type="button" class="action-btn mic-btn" id="btnMic" title="Voice Input (Speech-to-Text)">
+                    <span>🎙️</span>
                 </button>
-
-                <button type="submit" class="send-btn" id="btnSend" title="Transmit Command">
-                    <span>TRANSMIT</span>
-                    <span class="send-arrow">➔</span>
+                <button type="submit" class="action-btn send-btn" id="btnSend" title="Send message">
+                    <span>Send</span>
+                    <span class="send-icon">↵</span>
                 </button>
             </form>
         </footer>
