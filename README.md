@@ -8,6 +8,7 @@
 [![Speech](https://img.shields.io/badge/Voice-ElevenLabs%20Flash%20v2.5-FF3366.svg?style=for-the-badge&logo=elevenlabs&logoColor=white)](https://elevenlabs.io/)
 [![RAG](https://img.shields.io/badge/Online%20RAG-Real--Time%20Live%20Web-FF9900.svg?style=for-the-badge&logo=rss&logoColor=white)](#-online-rag-pipeline)
 [![Edge Ready](https://img.shields.io/badge/Hardware-Raspberry%20Pi%20%7C%20Win%20%7C%20Mac%20%7C%20Linux-brightgreen.svg?style=for-the-badge&logo=raspberrypi&logoColor=white)](#-the-raspberry-pi-problem-statement)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Render-46E3B7.svg?style=for-the-badge&logo=render&logoColor=black)](https://ai-terminal-3j8d.onrender.com)
 [![License](https://img.shields.io/badge/License-MIT-purple.svg?style=for-the-badge)](LICENSE)
 
 <br/>
@@ -17,6 +18,10 @@
 <br/>
 
 [Problem Statement](#-the-raspberry-pi-problem-statement) • [System Architecture](#-deep-system-architecture) • [Online RAG](#-online-rag-pipeline) • [Features](#-comprehensive-feature-matrix) • [Edge vs Cloud](#-edge-vs-cloud-compute-matrix) • [Quick Start](#-quick-start)
+
+<br/>
+
+### 🚀 **Live Production App**: [https://ai-terminal-3j8d.onrender.com](https://ai-terminal-3j8d.onrender.com)
 
 </div>
 
@@ -333,7 +338,11 @@ python main.py --no-tts
 
 ## ☁️ Free Cloud Deployment Guide
 
-You can deploy the complete IVERI AI Terminal web application with 24/7 uptime on free cloud tiers:
+> [!TIP]
+> **Production Instance Live**: IVERI AI Terminal is officially deployed and accessible 24/7 on Render at:  
+> **👉 [https://ai-terminal-3j8d.onrender.com](https://ai-terminal-3j8d.onrender.com)**
+
+You can also deploy your own independent instance with 24/7 uptime on free cloud tiers:
 
 ### 🚀 Option 1: Render.com (Recommended Free Web Service)
 1. Fork or push this repository to your GitHub account: `https://github.com/ishwaribhoyar/AI-Terminal`.
