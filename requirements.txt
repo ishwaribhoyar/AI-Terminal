@@ -11,16 +11,16 @@ uvicorn>=0.23.0
 
 # Speech Recognition
 SpeechRecognition>=3.10.0
-PyAudio>=0.2.13
+PyAudio>=0.2.13; platform_system != 'Linux'
 
 # Text-to-Speech
-pyttsx3>=2.90
+pyttsx3>=2.90; platform_system != 'Linux'
 
 # Wake Word Detection
 pvporcupine>=3.0.0
-pvrecorder>=1.2.0
+pvrecorder>=1.2.0; platform_system != 'Linux'
 
-# Audio
+# Audio Playback
 pygame>=2.5.0
 
 # Screenshot & Automation
@@ -29,6 +29,3 @@ Pillow>=10.0.0
 
 # System Info
 psutil>=5.9.0
-
-# Raspberry Pi GPIO (only works on Pi)
-# RPi.GPIO>=0.7.1  # Uncomment on Raspberry Pi
