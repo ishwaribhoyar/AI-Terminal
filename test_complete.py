@@ -10,6 +10,15 @@ load_dotenv()
 import sys
 import os
 
+if sys.platform == 'win32':
+    try:
+        if hasattr(sys.stdout, 'reconfigure'):
+            sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        if hasattr(sys.stderr, 'reconfigure'):
+            sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
 print("=" * 60)
 print("IVERI - COMPLETE 30+ FEATURE TEST")
 print("=" * 60)
@@ -166,16 +175,16 @@ h, r = internet_tasks.handle_internet_task("google python tutorials")
 test("google search (internet)", lambda: h)
 
 # ============================================================
-print("\n[4] GPT - gpt.py")
+print("\n[4] AI - Gemini 1.5 Flash (gpt.py)")
 # ============================================================
 import gpt
 
 r = gpt.get_simple_response("Say OK")
-test("gpt response", lambda: r and len(r) > 0)
+test("gemini response", lambda: r and len(r) > 0)
 print(f"       -> {r}")
 
 r = gpt.clear_history()
-test("clear gpt history", lambda: True)
+test("clear ai history", lambda: True)
 
 # ============================================================
 print("\n[5] TTS - tts.py")

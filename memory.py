@@ -5,9 +5,15 @@ import os
 from datetime import datetime
 
 # File paths for persistent storage
-DATA_DIR = os.path.expanduser("~/iveri/data")
-MEMORY_FILE = os.path.join(DATA_DIR, "memory.json")
-NOTES_FILE = os.path.join(DATA_DIR, "notes.json")
+try:
+    import config
+    DATA_DIR = getattr(config, 'DATA_DIR', os.path.join(os.path.dirname(os.path.abspath(__file__)), "data"))
+    MEMORY_FILE = getattr(config, 'MEMORY_FILE', os.path.join(DATA_DIR, "memory.json"))
+    NOTES_FILE = getattr(config, 'NOTES_FILE', os.path.join(DATA_DIR, "notes.json"))
+except Exception:
+    DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+    MEMORY_FILE = os.path.join(DATA_DIR, "memory.json")
+    NOTES_FILE = os.path.join(DATA_DIR, "notes.json")
 
 # Ensure data directory exists
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -17,7 +23,7 @@ def load_json(filepath):
     """Load JSON file or return empty dict"""
     if os.path.exists(filepath):
         try:
-            with open(filepath, 'r') as f:
+            with open(filepath, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except (json.JSONDecodeError, IOError):
             return {}
@@ -25,10 +31,15 @@ def load_json(filepath):
 
 
 def save_json(filepath, data):
-    """Save data to JSON file"""
+    """Save data to JSON file atomically"""
     try:
-        with open(filepath, 'w') as f:
+        temp_path = f"{filepath}.tmp"
+        with open(temp_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2)
+        if os.path.exists(filepath):
+            os.replace(temp_path, filepath)
+        else:
+            os.rename(temp_path, filepath)
     except IOError as e:
         print(f"Error saving to {filepath}: {e}")
 
@@ -169,14 +180,13 @@ def handle_memory_command(user_input):
     Returns:
         tuple: (handled: bool, response: str)
     """
-    text = user_input.lower()
+    text = user_input.lower().strip()
     
     # === REMEMBER COMMANDS ===
     # "remember my name is John" or "remember that my favorite color is blue"
     if 'remember my' in text or 'remember that my' in text:
         try:
             if ' is ' in text:
-                # Split on " is " to get key and value
                 parts = text.split(' is ', 1)
                 key = parts[0].replace('remember my', '').replace('remember that my', '').strip()
                 value = parts[1].strip()
@@ -191,7 +201,7 @@ def handle_memory_command(user_input):
     # === RECALL COMMANDS ===
     # "what is my name" or "what's my favorite color"
     if "what is my" in text or "what's my" in text:
-        key = text.replace("what is my", "").replace("what's my", "").strip().rstrip("?")
+        key = text.replace("what is my", "").replace("what's my", "").strip().rstrip("?").strip()
         
         if key:
             value = memory.recall(key)
@@ -205,7 +215,7 @@ def handle_memory_command(user_input):
     # === FORGET COMMANDS ===
     # "forget my name"
     if 'forget my' in text:
-        key = text.replace('forget my', '').strip()
+        key = text.replace('forget my', '').strip().rstrip("?").strip()
         if key:
             return True, memory.forget(key)
     

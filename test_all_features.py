@@ -4,11 +4,20 @@ IVERI AI - Comprehensive Cross-Platform Feature Test
 Tests ALL features on Windows and Linux/Pi
 """
 
-from dotenv import load_dotenv
-load_dotenv()
-
 import sys
 import os
+from dotenv import load_dotenv
+
+if sys.platform == 'win32':
+    try:
+        if hasattr(sys.stdout, 'reconfigure'):
+            sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        if hasattr(sys.stderr, 'reconfigure'):
+            sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
+load_dotenv()
 
 print("=" * 60)
 print("IVERI AI - COMPLETE FEATURE TEST")
@@ -34,7 +43,7 @@ def test(name, handled, expected=True):
 print("\n[COMMANDS]")
 import commands
 
-# Websites (don't actually open - just check handler)
+# Websites (dry-run: execute=False)
 website_tests = [
     "open youtube",
     "open google", 
@@ -52,19 +61,30 @@ website_tests = [
 
 print("  Websites:")
 for cmd in website_tests:
-    h, r = commands.handle_command(cmd)
+    h, r = commands.handle_command(cmd, execute=False)
     status = test(cmd, h, True)
-    # Don't print each, just count
 
 print(f"    {len(website_tests)} website commands: OK")
 
-# Apps
+# Apps (dry-run: execute=False)
 print("  Apps:")
 app_tests = ["open calculator", "open notepad", "open terminal", "open file manager"]
 for cmd in app_tests:
-    h, r = commands.handle_command(cmd)
+    h, r = commands.handle_command(cmd, execute=False)
     test(cmd, h, True)
 print(f"    {len(app_tests)} app commands: OK")
+
+# Math calculations
+print("  Math & Calculation:")
+math_tests = [
+    ("what is 25 * 4", True),
+    ("calculate 100 / 4", True),
+    ("what's 15 plus 35", True),
+]
+for cmd, expected in math_tests:
+    h, r = commands.handle_command(cmd, execute=False)
+    test(cmd, h, expected)
+print(f"    {len(math_tests)} math commands: OK")
 
 # Search
 print("  Search:")
@@ -75,7 +95,7 @@ search_tests = [
     ("wikipedia artificial intelligence", True),
 ]
 for cmd, expected in search_tests:
-    h, r = commands.handle_command(cmd)
+    h, r = commands.handle_command(cmd, execute=False)
     test(cmd, h, expected)
 print(f"    {len(search_tests)} search commands: OK")
 
@@ -87,49 +107,49 @@ time_tests = [
     "what day is it",
 ]
 for cmd in time_tests:
-    h, r = commands.handle_command(cmd)
+    h, r = commands.handle_command(cmd, execute=False)
     s = test(cmd, h, True)
     print(f"    {cmd}: {r}")
 
-# Folders
+# Folders (dry run)
 print("  Folders:")
 folder_tests = ["open downloads", "open documents", "open desktop"]
 for cmd in folder_tests:
-    h, r = commands.handle_command(cmd)
+    h, r = commands.handle_command(cmd, execute=False)
     test(cmd, h, True)
 print(f"    {len(folder_tests)} folder commands: OK")
 
-# Screen
+# Screen (dry run)
 print("  Screen:")
-h, r = commands.handle_command("take a screenshot")
+h, r = commands.handle_command("take a screenshot", execute=False)
 print(f"    Screenshot: {r}")
 test("screenshot", h, True)
 
-# Volume
+# Volume (dry run)
 print("  Volume:")
 vol_tests = ["volume up", "volume down", "mute", "unmute"]
 for cmd in vol_tests:
-    h, r = commands.handle_command(cmd)
+    h, r = commands.handle_command(cmd, execute=False)
     test(cmd, h, True)
 print(f"    {len(vol_tests)} volume commands: OK")
 
 # System
 print("  System:")
-h, r = commands.handle_command("my ip address")
+h, r = commands.handle_command("my ip address", execute=False)
 print(f"    IP: {r}")
 test("ip", h, True)
 
-h, r = commands.handle_command("battery status")
+h, r = commands.handle_command("battery status", execute=False)
 print(f"    Battery: {r}")
 test("battery", h, True)
 
 # Chat
 print("  Chat:")
-h, r = commands.handle_command("help")
+h, r = commands.handle_command("help", execute=False)
 test("help", h, True)
 print(f"    Help: OK (returns {len(r)} chars)")
 
-h, r = commands.handle_command("clear history")
+h, r = commands.handle_command("clear history", execute=False)
 test("clear", h, True)
 print(f"    Clear history: OK")
 
@@ -178,7 +198,7 @@ else:
     test("weather", h, True)
 
 h, r = internet_tasks.handle_internet_task("tech news")
-if "not configured" in r.lower():
+if "requires a free newsapi key" in r.lower() or "not configured" in r.lower():
     print(f"  News: SKIP (no API key)")
     skipped += 1
 else:
@@ -186,14 +206,14 @@ else:
     test("news", h, True)
 
 # ============================================================
-# GPT
+# AI (GEMINI 1.5 FLASH)
 # ============================================================
-print("\n[GPT - gpt-5-nano]")
+print("\n[AI - Gemini 1.5 Flash]")
 import gpt
 
 r = gpt.get_simple_response("Say OK")
 print(f"  Response: {r}")
-test("gpt", True if r else False, True)
+test("gemini", True if r else False, True)
 
 # ============================================================
 # TTS
@@ -214,7 +234,7 @@ try:
     h, r = hardware.handle_hardware_command("led status")
     print(f"  LED: {r}")
     test("hardware", h, True)
-except Exception as e:
+except Exception:
     print(f"  Hardware: SKIP (not on Pi)")
     skipped += 1
 

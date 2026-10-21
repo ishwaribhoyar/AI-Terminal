@@ -10,8 +10,13 @@ import traceback
 
 # Fix Windows console encoding
 if sys.platform == 'win32':
-    import io
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    try:
+        if hasattr(sys.stdout, 'reconfigure'):
+            sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        if hasattr(sys.stderr, 'reconfigure'):
+            sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
 
 print("=" * 70)
 print("IVERI AI - COMPREHENSIVE END-TO-END SYSTEM TEST")
@@ -41,19 +46,19 @@ except Exception as e:
 # TEST 2: API Keys
 # ============================================================
 print("\n[2/10] Checking API keys...")
-openai_key = os.getenv('OPENAI_API_KEY', '')
+gemini_key = os.getenv('GEMINI_API_KEY', '')
 picovoice_key = os.getenv('PICOVOICE_ACCESS_KEY', '')
 
-if openai_key and 'your' not in openai_key.lower():
-    print(f"   OK: OPENAI_API_KEY set")
+if gemini_key and 'your' not in gemini_key.lower():
+    print(f"   OK: GEMINI_API_KEY set")
 else:
-    errors.append("OPENAI_API_KEY missing")
-    print("   FAIL: OPENAI_API_KEY missing")
+    warnings.append("GEMINI_API_KEY not configured (get free at https://aistudio.google.com/app/apikey)")
+    print("   INFO: GEMINI_API_KEY not set (local commands ready)")
 
 if picovoice_key and 'your' not in picovoice_key.lower():
     print(f"   OK: PICOVOICE_ACCESS_KEY set")
 else:
-    warnings.append("PICOVOICE_ACCESS_KEY missing - wake word disabled")
+    warnings.append("PICOVOICE_ACCESS_KEY missing - wake word disabled (keyboard trigger active)")
     print("   WARN: PICOVOICE_ACCESS_KEY missing")
 
 # ============================================================
@@ -62,7 +67,7 @@ else:
 print("\n[3/10] Testing module imports...")
 
 modules_to_test = [
-    ('openai', 'OpenAI API'),
+    ('google.genai', 'Google GenAI SDK (Gemini)'),
     ('speech_recognition', 'Speech Recognition'),
     ('pyttsx3', 'Text-to-Speech'),
     ('pvporcupine', 'Wake Word (Porcupine)'),
@@ -86,23 +91,23 @@ print("\n[4/10] Testing config.py...")
 try:
     import config
     print(f"   OK: config.py loaded")
-    print(f"   -> GPT_MODEL: {config.GPT_MODEL}")
+    print(f"   -> AI_MODEL: {config.AI_MODEL}")
 except Exception as e:
     errors.append(f"config.py: {e}")
     print(f"   FAIL: {e}")
 
 # ============================================================
-# TEST 5: gpt.py - OpenAI API
+# TEST 5: gpt.py - Gemini 1.5 Flash
 # ============================================================
-print("\n[5/10] Testing gpt.py (OpenAI gpt-5-nano)...")
+print("\n[5/10] Testing AI module (Gemini 1.5 Flash)...")
 try:
     import gpt
     response = gpt.get_response("Say only the word 'SUCCESS'", use_history=False)
     if response:
-        print(f"   OK: gpt.py working")
+        print(f"   OK: AI response module working")
         print(f"   -> Response: {response[:100]}")
     else:
-        errors.append("gpt.py returned empty response")
+        errors.append("AI module returned empty response")
         print("   FAIL: Empty response")
 except Exception as e:
     errors.append(f"gpt.py: {e}")
@@ -135,7 +140,6 @@ print("\n[7/10] Testing tts.py...")
 try:
     import tts
     print("   OK: tts.py loaded")
-    # Test speaking
     tts.speak("IVERI end to end test successful")
     print("   OK: TTS spoke test message")
 except Exception as e:
@@ -148,9 +152,7 @@ except Exception as e:
 print("\n[8/10] Testing commands.py...")
 try:
     import commands
-    
-    # Test time command
-    handled, response = commands.handle_command("what time is it")
+    handled, response = commands.handle_command("what time is it", execute=False)
     if handled and response:
         print(f"   OK: commands.py working")
         print(f"   -> Time command: {response}")
@@ -167,14 +169,11 @@ except Exception as e:
 print("\n[9/10] Testing memory.py...")
 try:
     import memory
-    
-    # Test remember and recall
     result = memory.memory.remember("test_key", "test_value")
     recalled = memory.memory.recall("test_key")
     
     if recalled == "test_value":
         print("   OK: memory.py working (remember/recall)")
-        # Clean up test
         memory.memory.forget("test_key")
     else:
         errors.append("memory.py recall failed")
@@ -193,7 +192,7 @@ try:
         print("   OK: wakeword.py loaded")
         print("   -> Wake word detection ready")
     else:
-        print("   SKIP: No PICOVOICE_ACCESS_KEY (wake word disabled)")
+        print("   SKIP: No PICOVOICE_ACCESS_KEY (keyboard activation active)")
         warnings.append("Wake word skipped - no API key")
 except Exception as e:
     errors.append(f"wakeword.py: {e}")
@@ -208,7 +207,7 @@ print("TEST SUMMARY")
 print("=" * 70)
 
 if not errors:
-    print("\nALL TESTS PASSED!")
+    print("\nALL SYSTEM MODULE TESTS PASSED!")
     print("\nTo run IVERI AI: python main.py")
 else:
     print(f"\nERRORS ({len(errors)}):")
@@ -216,7 +215,7 @@ else:
         print(f"   - {err}")
 
 if warnings:
-    print(f"\nWARNINGS ({len(warnings)}):")
+    print(f"\nWARNINGS / ADVISORIES ({len(warnings)}):")
     for warn in warnings:
         print(f"   - {warn}")
 

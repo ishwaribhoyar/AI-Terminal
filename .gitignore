@@ -35,3 +35,6 @@ models/*.ppn
 
 # Logs
 *.log
+
+# Cache
+cache/

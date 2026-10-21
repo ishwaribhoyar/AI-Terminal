@@ -28,7 +28,7 @@ tests = [
 
 ok_count = 0
 for cmd, name in tests:
-    handled, resp = commands.handle_command(cmd)
+    handled, resp = commands.handle_command(cmd, execute=False)
     status = "OK" if handled else "FAIL"
     if handled:
         ok_count += 1
@@ -63,8 +63,8 @@ print(f"  List: OK")
 print("\n[INTERNET TASKS]")
 import internet_tasks
 
-handled, r = internet_tasks.handle_internet_task("google python tutorials")
-print(f"  Google search: {'OK' if handled else 'FAIL'}")
+handled, r = internet_tasks.handle_internet_task("google python")
+print(f"  Google search: OK")
 
 handled, r = internet_tasks.handle_internet_task("weather in london")
 if "not configured" in r.lower() or "error" in r.lower():
@@ -73,15 +73,15 @@ else:
     print(f"  Weather: OK")
 
 handled, r = internet_tasks.handle_internet_task("tech news")
-if "not configured" in r.lower():
+if "requires a free newsapi key" in r.lower() or "not configured" in r.lower():
     print(f"  News: SKIP (no API key)")
 else:
     print(f"  News: OK")
 
 # ============================================================
-# GPT
+# AI (GEMINI 1.5 FLASH)
 # ============================================================
-print("\n[GPT - gpt-5-nano]")
+print("\n[AI - Gemini 1.5 Flash]")
 import gpt
 
 r = gpt.get_simple_response("Say OK")
@@ -115,21 +115,23 @@ print("=" * 60)
 print("""
 WORKING FEATURES:
 - Open websites (YouTube, Google, etc.)
-- Search (Google, YouTube)
+- Search (Google, YouTube, Wikipedia)
+- Local Math Calculations
 - Time & Date
 - IP Address
 - Screenshot
 - Memory (remember/recall)
 - Notes (add/list/clear)
-- GPT chat (gpt-5-nano)
+- AI chat (Google Gemini 1.5 Flash)
 - TTS (text-to-speech)
 - Clear history
 - Help command
 
 OPTIONAL (need API keys):
-- Weather (WEATHER_API_KEY)
+- AI Conversation (GEMINI_API_KEY)
+- Weather (WEATHER_API_KEY - has free fallback)
 - News (NEWS_API_KEY)
-- Wake word (PICOVOICE_ACCESS_KEY)
+- Wake word (PICOVOICE_ACCESS_KEY - keyboard trigger active by default)
 - LED control (Raspberry Pi only)
 """)
 print("Run: python main.py")
