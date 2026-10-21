@@ -143,53 +143,150 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Web Speech API (Browser STT)
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-        recognition = new SpeechRecognition();
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        recognition.lang = "en-US";
+    // Robust Web Speech API (Browser STT) with auto-reconnect & silence debouncing
+    let silenceTimer = null;
+    let currentSpeechText = "";
 
-        recognition.onstart = () => {
+    function createRecognizer() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) return null;
+
+        const rec = new SpeechRecognition();
+        rec.continuous = true;
+        rec.interimResults = true;
+        rec.lang = "en-US";
+        rec.maxAlternatives = 1;
+
+        rec.onstart = () => {
             isListening = true;
             btnMic.classList.add("listening");
             audioStateTag.textContent = "Listening...";
+            cliInput.placeholder = "Listening... Speak now (tap mic to stop)";
             cancelAnimationFrame(visualizerAnimationId);
             drawActiveVisualizer();
         };
 
-        recognition.onresult = (event) => {
-            const transcript = event.results[0][0].transcript;
-            cliInput.value = transcript;
-            handleSubmit(transcript);
+        rec.onresult = (event) => {
+            let interim = "";
+            let final = "";
+
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const text = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    final += text;
+                } else {
+                    interim += text;
+                }
+            }
+
+            const spoken = (final || interim).trim();
+            if (spoken) {
+                cliInput.value = spoken;
+                currentSpeechText = spoken;
+
+                // Debounce silence timer: auto-submit 1.8s after user stops talking
+                clearTimeout(silenceTimer);
+                silenceTimer = setTimeout(() => {
+                    if (isListening && currentSpeechText) {
+                        const finalQuery = currentSpeechText;
+                        stopListening();
+                        handleSubmit(finalQuery);
+                    }
+                }, 1800);
+            }
         };
 
-        recognition.onerror = () => stopListening();
-        recognition.onend = () => stopListening();
-    } else {
+        rec.onerror = (event) => {
+            console.warn("Speech recognition notice:", event.error);
+            // CRITICAL: Ignore 'no-speech' error so it does NOT quickly turn off
+            if (event.error === "no-speech") {
+                return;
+            }
+            if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+                stopListening();
+                alert("Microphone permission was denied. Please allow microphone access in your browser address bar.");
+            }
+        };
+
+        rec.onend = () => {
+            // Keep listening if user didn't manually stop
+            if (isListening) {
+                try {
+                    rec.start();
+                } catch (e) {
+                    stopListening();
+                }
+            }
+        };
+
+        return rec;
+    }
+
+    recognition = createRecognizer();
+    if (!recognition) {
         btnMic.title = "Voice recognition not supported in this browser";
         btnMic.style.opacity = "0.5";
     }
 
     function stopListening() {
         isListening = false;
+        clearTimeout(silenceTimer);
         btnMic.classList.remove("listening");
         audioStateTag.textContent = "Ready";
+        cliInput.placeholder = "Ask a question, enter math, or run a command... (Enter)";
+        if (recognition) {
+            try {
+                recognition.stop();
+            } catch (e) {}
+        }
         cancelAnimationFrame(visualizerAnimationId);
         drawIdleVisualizer();
     }
 
-    btnMic.addEventListener("click", () => {
-        if (!recognition) return;
+    btnMic.addEventListener("click", async () => {
         if (isListening) {
-            recognition.stop();
-        } else {
+            // User tapped mic button to stop and submit
+            clearTimeout(silenceTimer);
+            const textToSubmit = currentSpeechText || cliInput.value.trim();
+            stopListening();
+            if (textToSubmit) {
+                handleSubmit(textToSubmit);
+            }
+            return;
+        }
+
+        // Request browser microphone permission to wake up hardware
+        try {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                stream.getTracks().forEach(track => track.stop());
+            }
+        } catch (e) {
+            console.warn("Microphone access prompt:", e);
+        }
+
+        currentSpeechText = "";
+        cliInput.value = "";
+
+        if (!recognition) {
+            recognition = createRecognizer();
+        }
+
+        if (recognition) {
             try {
+                isListening = true;
                 recognition.start();
             } catch (e) {
-                console.error(e);
+                console.warn("Speech start note, restarting:", e);
+                try {
+                    recognition.stop();
+                    setTimeout(() => {
+                        if (isListening) recognition.start();
+                    }, 200);
+                } catch (err) {}
             }
+        } else {
+            alert("Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.");
         }
     });
 

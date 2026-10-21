@@ -166,6 +166,34 @@ def stream_audio(audio_id: str):
     )
 
 
+@app.post("/api/transcribe")
+async def transcribe_audio(request: Request):
+    """Fallback audio transcription endpoint using SpeechRecognition"""
+    try:
+        body = await request.body()
+        if not body:
+            return {"transcript": "", "error": "Empty audio data"}
+            
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+            tmp.write(body)
+            tmp_path = tmp.name
+
+        import speech_recognition as sr
+        recognizer = sr.Recognizer()
+        with sr.AudioFile(tmp_path) as source:
+            audio_data = recognizer.record(source)
+            text = recognizer.recognize_google(audio_data)
+
+        try:
+            os.remove(tmp_path)
+        except Exception:
+            pass
+
+        return {"transcript": text}
+    except Exception as e:
+        return {"transcript": "", "error": str(e)}
+
+
 # Serve single-page frontend static files
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
