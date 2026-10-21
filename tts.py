@@ -62,6 +62,21 @@ except Exception:
 # Track if ElevenLabs warning has been shown to avoid spamming console
 _eleven_warning_shown = False
 
+# Active voice engine choice: 'new' (ElevenLabs Flash v2.5) or 'classic' / 'old' (pyttsx3)
+CURRENT_VOICE_ENGINE = os.getenv('VOICE_ENGINE', 'new').lower()
+
+def set_voice_engine(engine_name):
+    global CURRENT_VOICE_ENGINE
+    clean = str(engine_name).lower().strip()
+    if clean in ('old', 'classic', 'local', 'system', 'offline', 'pyttsx3'):
+        CURRENT_VOICE_ENGINE = 'classic'
+    else:
+        CURRENT_VOICE_ENGINE = 'new'
+    return CURRENT_VOICE_ENGINE
+
+def get_voice_engine():
+    return CURRENT_VOICE_ENGINE
+
 
 def _play_audio_file(filepath):
     """Play audio file using pygame.mixer"""
@@ -147,6 +162,32 @@ def _speak_elevenlabs(text):
         return False
 
 
+def synthesize_elevenlabs_speech(text):
+    """Synthesize speech bytes from ElevenLabs API directly"""
+    api_key = getattr(config, 'ELEVENLABS_API_KEY', '') or os.getenv('ELEVENLABS_API_KEY', '')
+    if not api_key or api_key.startswith('your'):
+        return None
+    voice_id = getattr(config, 'ELEVENLABS_VOICE_ID', '21m00Tcm4TlvDq8ikWAM')
+    model_id = getattr(config, 'ELEVENLABS_MODEL_ID', 'eleven_flash_v2_5')
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+    headers = {
+        "xi-api-key": api_key,
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "text": text,
+        "model_id": model_id,
+        "voice_settings": {"stability": 0.5, "similarity_boost": 0.75}
+    }
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        if response.status_code == 200:
+            return response.content
+    except Exception:
+        pass
+    return None
+
+
 def _speak_offline(text):
     """Fallback local speech synthesis using pyttsx3"""
     if _offline_engine and TTS_ENABLED:
@@ -175,7 +216,12 @@ def speak(text):
     if not TTS_ENABLED:
         return
 
-    # 1. Try ElevenLabs Flash v2.5
+    # Check user voice choice ('classic' vs 'new')
+    if CURRENT_VOICE_ENGINE in ('classic', 'old', 'system', 'offline'):
+        _speak_offline(text)
+        return
+
+    # 1. Try ElevenLabs Flash v2.5 (New Voice)
     success = _speak_elevenlabs(text)
     
     # 2. Offline fallback if ElevenLabs is unavailable or unpermitted

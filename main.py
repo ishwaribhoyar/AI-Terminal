@@ -214,12 +214,16 @@ def main():
     parser.add_argument('--wake', action='store_true', help="Start directly in voice wake mode")
     parser.add_argument('--setup', action='store_true', help="Run configuration setup wizard")
     parser.add_argument('--no-tts', action='store_true', help="Disable voice audio output (silent mode)")
+    parser.add_argument('--voice', choices=['new', 'classic', 'old', 'elevenlabs', 'system'], default=None, help="Choose voice engine: 'new' (ElevenLabs Flash v2.5) or 'classic' / 'old' (Offline system voice)")
     parser.add_argument('--status', action='store_true', help="Show current system configuration status")
     args = parser.parse_args()
 
     if args.no_tts:
         tts.set_enabled(False)
         config.ENABLE_TTS = False
+
+    if getattr(args, 'voice', None):
+        tts.set_voice_engine(args.voice)
 
     if args.status:
         config.print_config()

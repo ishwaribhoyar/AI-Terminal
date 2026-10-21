@@ -50,6 +50,7 @@ class ChatRequest(BaseModel):
     message: str
     use_history: Optional[bool] = True
     voice_response: Optional[bool] = True
+    voice_choice: Optional[str] = "new"  # 'new' (ElevenLabs Flash v2.5) or 'classic' (Offline system voice)
     force_rag: Optional[bool] = False
 
 
@@ -115,15 +116,16 @@ def handle_chat(req: ChatRequest):
         is_rag_query = req.force_rag or online_rag.should_use_rag(user_msg)
         source = "rag" if is_rag_query else "ai"
 
-    # Step 3: Handle ElevenLabs audio generation if requested
+    # Step 3: Handle Audio Generation based on user choice ('new' vs 'classic')
     audio_id = None
     audio_url = None
-    if req.voice_response and response_text:
+    voice_engine = "classic" if req.voice_choice in ("classic", "old", "system") else "new"
+
+    if req.voice_response and response_text and voice_engine == "new":
         try:
             cache_hash = hashlib.md5(f"eleven_{response_text}".encode("utf-8")).hexdigest()
             cache_file = CACHE_DIR / f"{cache_hash}.mp3"
             
-            # Check if cached already or fetch via ElevenLabs
             eleven_key = os.getenv("ELEVENLABS_API_KEY")
             if cache_file.exists():
                 audio_id = cache_hash
@@ -135,14 +137,14 @@ def handle_chat(req: ChatRequest):
                         f.write(audio_bytes)
                     audio_id = cache_hash
                     audio_url = f"/api/audio/{audio_id}"
-        except Exception as e:
-            # Non-blocking audio generation error
+        except Exception:
             pass
 
     return {
         "user_message": user_msg,
         "response": response_text,
         "source": source,
+        "voice_engine": voice_engine,
         "audio_url": audio_url
     }
 

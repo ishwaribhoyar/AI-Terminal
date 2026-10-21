@@ -83,6 +83,23 @@ def handle_command(user_input, execute=True):
                 if ans is not None:
                     return True, f"The answer is {ans}."
 
+    # === VOICE ENGINE SWITCHING (OLD vs NEW VOICE) ===
+    if text in ['use old voice', 'switch to old voice', 'use classic voice', 'switch to classic voice', 'old voice', 'classic voice', 'offline voice', 'use system voice']:
+        try:
+            import tts
+            tts.set_voice_engine('classic')
+        except Exception:
+            pass
+        return True, "Switched to classic offline system voice."
+
+    if text in ['use new voice', 'switch to new voice', 'use elevenlabs voice', 'switch to elevenlabs voice', 'new voice', 'elevenlabs voice', 'modern voice']:
+        try:
+            import tts
+            tts.set_voice_engine('new')
+        except Exception:
+            pass
+        return True, "Switched to new ElevenLabs Flash voice engine."
+
     # === BROWSER / WEBSITE COMMANDS ===
     websites = [
         ('youtube', 'https://www.youtube.com', 'YouTube'),

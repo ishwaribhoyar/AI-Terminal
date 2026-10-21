@@ -17,6 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnThemeToggle = document.getElementById("btnThemeToggle");
     const themeIcon = document.getElementById("themeIcon");
     const themeText = document.getElementById("themeText");
+    const voiceChoiceSelect = document.getElementById("voiceChoiceSelect");
     const ttsAudio = document.getElementById("ttsAudio");
     const audioStateTag = document.getElementById("audioStateTag");
     const audioCanvas = document.getElementById("audioVisualizer");
@@ -29,6 +30,15 @@ document.addEventListener("DOMContentLoaded", () => {
     let isProcessing = false;
     let recognition = null;
     let visualizerAnimationId = null;
+
+    // VOICE ENGINE CHOICE ('new' vs 'classic')
+    const savedVoice = localStorage.getItem("iveri_voice_choice") || "new";
+    if (voiceChoiceSelect) {
+        voiceChoiceSelect.value = savedVoice;
+        voiceChoiceSelect.addEventListener("change", () => {
+            localStorage.setItem("iveri_voice_choice", voiceChoiceSelect.value);
+        });
+    }
 
     // THEME MANAGEMENT (Light / Dark)
     const savedTheme = localStorage.getItem("iveri_theme") || "dark";
@@ -224,7 +234,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({
                     message: text,
                     use_history: true,
-                    voice_response: isVoiceEnabled
+                    voice_response: isVoiceEnabled,
+                    voice_choice: voiceChoiceSelect ? voiceChoiceSelect.value : "new"
                 })
             });
 
@@ -260,20 +271,25 @@ document.addEventListener("DOMContentLoaded", () => {
         drawIdleVisualizer();
     }
 
-    // Audio Playback
+    // Audio Playback with Choice between New and Classic Voice
     function playAudioResponse(text, audioUrl) {
         audioStateTag.textContent = "Speaking...";
         cancelAnimationFrame(visualizerAnimationId);
         drawActiveVisualizer();
 
-        if (audioUrl) {
-            ttsAudio.src = audioUrl;
-            ttsAudio.play().then(() => {
-                ttsAudio.onended = () => finishProcessing();
-            }).catch(() => fallbackBrowserTTS(text));
-        } else {
+        const currentChoice = voiceChoiceSelect ? voiceChoiceSelect.value : "new";
+
+        // If user chose classic voice, speak directly using native system voice
+        if (currentChoice === "classic" || !audioUrl) {
             fallbackBrowserTTS(text);
+            return;
         }
+
+        // User chose new voice (ElevenLabs Flash v2.5)
+        ttsAudio.src = audioUrl;
+        ttsAudio.play().then(() => {
+            ttsAudio.onended = () => finishProcessing();
+        }).catch(() => fallbackBrowserTTS(text));
     }
 
     function fallbackBrowserTTS(text) {
